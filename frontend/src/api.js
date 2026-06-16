@@ -42,6 +42,10 @@ export const createBook = (data) => api.post('/books', data);
 export const updateBook = (id, data) => api.put(`/books/${id}`, data);
 export const deleteBook = (id) => api.delete(`/books/${id}`);
 
+// AI Search
+export const aiSearchStatus = () => api.get('/books/ai-search/status');
+export const aiSearchBooks = (query) => api.post('/books/ai-search', { query });
+
 // Checkouts
 export const checkoutBook = (bookId) => api.post('/checkouts', { bookId });
 export const returnBook = (recordId) => api.post(`/checkouts/${recordId}/return`);

@@ -52,3 +52,5 @@ public record PagedResult<T>(
     int PageSize,
     int TotalPages
 );
+
+public record AiSearchRequestDto(string Query);

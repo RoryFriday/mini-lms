@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using LibraryApi.Data;
 using LibraryApi.Services;
+using LibraryApi.Services.Ai;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +18,15 @@ builder.Services.AddDbContext<LibraryDbContext>(options =>
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IBookService, BookService>();
 builder.Services.AddScoped<ICheckoutService, CheckoutService>();
+
+// AI Provider (provider-agnostic: configure via Ai:Provider setting)
+var aiProvider = builder.Configuration["Ai:Provider"]?.ToLowerInvariant();
+if (aiProvider == "anthropic")
+    builder.Services.AddSingleton<IAiProvider, AnthropicProvider>();
+else
+    builder.Services.AddSingleton<IAiProvider, OpenAiProvider>();
+
+builder.Services.AddScoped<IAiSearchService, AiSearchService>();
 
 // Authentication
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "SuperSecretKeyThatIsLongEnough1234567890!";

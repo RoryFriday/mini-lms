@@ -12,6 +12,7 @@ A full-stack library management application built with **.NET 8.0**, **React**, 
   - **Librarian** — All patron abilities + add/edit books, view all checkouts, return books on behalf of users
   - **Admin** — All librarian abilities + delete books, manage user roles
 - **Swagger API Docs** — Interactive API documentation at `/swagger`
+- **AI-Powered Smart Search** — Natural language book search using OpenAI or Anthropic (provider-agnostic)
 
 ## Tech Stack
 
@@ -22,6 +23,7 @@ A full-stack library management application built with **.NET 8.0**, **React**, 
 | Auth           | JWT Bearer tokens, BCrypt password hashing |
 | Containerization | Docker, Docker Compose |
 | Infrastructure | Terraform, AWS (ECS Fargate, ALB, ECR, VPC) |
+| AI Providers   | OpenAI (GPT-4o) or Anthropic (Claude), configurable |
 
 ## Quick Start (Docker Compose)
 
@@ -33,6 +35,22 @@ A full-stack library management application built with **.NET 8.0**, **React**, 
 # Clone the repo and navigate to root
 docker-compose up --build
 ```
+
+### AI Search (Optional)
+
+To enable the AI-powered Smart Search, set your API key via environment variables:
+
+```bash
+# For OpenAI
+export AI_PROVIDER=OpenAi
+export OPENAI_API_KEY=sk-your-key-here
+
+# OR for Anthropic
+export AI_PROVIDER=Anthropic
+export ANTHROPIC_API_KEY=sk-ant-your-key-here
+```
+
+Then run `docker-compose up --build`. The Smart Search toggle will automatically appear on the Books page when an AI provider is configured. Without a key, the app works normally with standard keyword search only.
 
 The app will be available at:
 - **Frontend:** http://localhost (port 80)
@@ -97,11 +115,13 @@ New users who register via the UI are assigned the **Patron** role by default. A
 ### Books
 | Method | Endpoint           | Auth             | Description              |
 |--------|--------------------|------------------|--------------------------|
-| GET    | `/api/books`       | Public           | Search/list books        |
-| GET    | `/api/books/:id`   | Public           | Get book details         |
-| POST   | `/api/books`       | Librarian, Admin | Create a book            |
-| PUT    | `/api/books/:id`   | Librarian, Admin | Update a book            |
-| DELETE | `/api/books/:id`   | Admin            | Delete a book            |
+| GET    | `/api/books`              | Public           | Search/list books            |
+| GET    | `/api/books/:id`          | Public           | Get book details             |
+| POST   | `/api/books`              | Librarian, Admin | Create a book                |
+| PUT    | `/api/books/:id`          | Librarian, Admin | Update a book                |
+| DELETE | `/api/books/:id`          | Admin            | Delete a book                |
+| GET    | `/api/books/ai-search/status` | Public       | Check if AI search is available |
+| POST   | `/api/books/ai-search`    | Public           | Natural language AI search   |
 
 ### Checkouts
 | Method | Endpoint                    | Auth             | Description                |

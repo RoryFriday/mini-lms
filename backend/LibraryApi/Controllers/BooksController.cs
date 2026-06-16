@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using LibraryApi.DTOs;
 using LibraryApi.Services;
+using LibraryApi.Services.Ai;
 
 namespace LibraryApi.Controllers;
 
@@ -10,8 +11,13 @@ namespace LibraryApi.Controllers;
 public class BooksController : ControllerBase
 {
     private readonly IBookService _bookService;
+    private readonly IAiSearchService _aiSearchService;
 
-    public BooksController(IBookService bookService) => _bookService = bookService;
+    public BooksController(IBookService bookService, IAiSearchService aiSearchService)
+    {
+        _bookService = bookService;
+        _aiSearchService = aiSearchService;
+    }
 
     [HttpGet]
     public async Task<ActionResult<PagedResult<BookDto>>> Search(
@@ -54,5 +60,31 @@ public class BooksController : ControllerBase
     {
         var result = await _bookService.DeleteAsync(id);
         return result ? NoContent() : NotFound();
+    }
+
+    [HttpGet("ai-search/status")]
+    public IActionResult AiSearchStatus()
+    {
+        return Ok(new { available = _aiSearchService.IsAvailable });
+    }
+
+    [HttpPost("ai-search")]
+    public async Task<ActionResult<AiSearchResult>> AiSearch([FromBody] AiSearchRequestDto dto)
+    {
+        if (!_aiSearchService.IsAvailable)
+            return BadRequest(new { message = "AI search is not available. No AI provider is configured." });
+
+        if (string.IsNullOrWhiteSpace(dto.Query))
+            return BadRequest(new { message = "Query is required." });
+
+        try
+        {
+            var result = await _aiSearchService.SearchAsync(dto.Query);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "AI search failed. Falling back to standard search.", error = ex.Message });
+        }
     }
 }

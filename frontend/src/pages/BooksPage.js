@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { searchBooks, createBook, updateBook, deleteBook, checkoutBook } from '../api';
+import { searchBooks, createBook, updateBook, deleteBook, checkoutBook, aiSearchBooks, aiSearchStatus } from '../api';
 
 function BookModal({ book, onClose, onSave }) {
   const [form, setForm] = useState(book || {
@@ -91,7 +91,23 @@ export default function BooksPage() {
   const [editBook, setEditBook] = useState(null);
   const [message, setMessage] = useState('');
 
+  // AI search state
+  const [smartSearch, setSmartSearch] = useState(false);
+  const [aiAvailable, setAiAvailable] = useState(false);
+  const [aiResults, setAiResults] = useState(null); // { items, totalCount }
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
+
+  // Check if AI search is available on mount
+  useEffect(() => {
+    aiSearchStatus()
+      .then(res => setAiAvailable(res.data.available))
+      .catch(() => setAiAvailable(false));
+  }, []);
+
+  // Standard search
   const fetchBooks = useCallback(async () => {
+    if (smartSearch) return; // don't run standard search in smart mode
     try {
       const res = await searchBooks({ query, page, pageSize: 12 });
       setBooks(res.data.items);
@@ -99,15 +115,58 @@ export default function BooksPage() {
     } catch (err) {
       console.error('Failed to fetch books', err);
     }
-  }, [query, page]);
+  }, [query, page, smartSearch]);
 
   useEffect(() => { fetchBooks(); }, [fetchBooks]);
+
+  // Clear AI results when toggling off or clearing query
+  useEffect(() => {
+    if (!smartSearch) {
+      setAiResults(null);
+      setAiError('');
+    }
+  }, [smartSearch]);
+
+  // AI search handler
+  const handleAiSearch = async () => {
+    if (!query.trim()) return;
+    setAiLoading(true);
+    setAiError('');
+    setAiResults(null);
+    try {
+      const res = await aiSearchBooks(query);
+      setAiResults(res.data);
+    } catch (err) {
+      const msg = err.response?.data?.message || 'AI search failed';
+      setAiError(msg);
+      // Fallback: run standard search
+      try {
+        const fallback = await searchBooks({ query, page: 1, pageSize: 50 });
+        setBooks(fallback.data.items);
+        setTotalPages(fallback.data.totalPages);
+      } catch { /* ignore */ }
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  // Trigger AI search on Enter key
+  const handleKeyDown = (e) => {
+    if (smartSearch && e.key === 'Enter') {
+      e.preventDefault();
+      handleAiSearch();
+    }
+  };
 
   const handleCheckout = async (bookId) => {
     try {
       await checkoutBook(bookId);
       setMessage('Book checked out successfully!');
-      fetchBooks();
+      if (smartSearch && aiResults) {
+        handleAiSearch(); // refresh AI results
+      } else {
+        fetchBooks();
+      }
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       setMessage(err.response?.data?.message || 'Checkout failed');
@@ -119,7 +178,11 @@ export default function BooksPage() {
     if (!window.confirm('Are you sure you want to delete this book?')) return;
     try {
       await deleteBook(id);
-      fetchBooks();
+      if (smartSearch && aiResults) {
+        handleAiSearch();
+      } else {
+        fetchBooks();
+      }
     } catch (err) {
       setMessage('Failed to delete book');
       setTimeout(() => setMessage(''), 3000);
@@ -129,8 +192,19 @@ export default function BooksPage() {
   const handleSave = () => {
     setShowModal(false);
     setEditBook(null);
-    fetchBooks();
+    if (smartSearch && aiResults) {
+      handleAiSearch();
+    } else {
+      fetchBooks();
+    }
   };
+
+  // Determine which books to display
+  const displayBooks = smartSearch && aiResults
+    ? aiResults.items.map(item => ({ ...item.book, _aiScore: item.score, _aiReason: item.reason }))
+    : books;
+
+  const showPagination = !smartSearch && totalPages > 1;
 
   return (
     <div className="page">
@@ -147,20 +221,73 @@ export default function BooksPage() {
 
       <div className="search-bar">
         <input
-          placeholder="Search books by title, author, ISBN, genre..."
+          placeholder={smartSearch
+            ? 'Describe what you\'re looking for, e.g. "a book about dystopian society with surveillance"...'
+            : 'Search books by title, author, ISBN, genre...'}
           value={query}
-          onChange={(e) => { setQuery(e.target.value); setPage(1); }}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            if (!smartSearch) setPage(1);
+          }}
+          onKeyDown={handleKeyDown}
         />
+        {smartSearch && (
+          <button
+            className="btn btn-primary"
+            onClick={handleAiSearch}
+            disabled={aiLoading || !query.trim()}
+          >
+            {aiLoading ? '🔍 Searching...' : '🔍 AI Search'}
+          </button>
+        )}
+        {aiAvailable && (
+          <div className="smart-search-toggle">
+            <label className="toggle-label">
+              <input
+                type="checkbox"
+                checked={smartSearch}
+                onChange={(e) => setSmartSearch(e.target.checked)}
+              />
+              <span className="toggle-slider"></span>
+              <span className="toggle-text">✨ Smart Search (AI)</span>
+            </label>
+          </div>
+        )}
       </div>
 
+      {smartSearch && (
+        <div className="ai-search-hint">
+          💡 Smart Search uses AI to understand your query in natural language. Press <strong>Enter</strong> or click <strong>AI Search</strong> to find matching books.
+        </div>
+      )}
+
+      {aiError && <div className="alert alert-error">{aiError}</div>}
+
+      {aiLoading && (
+        <div className="ai-loading">
+          <div className="ai-loading-spinner"></div>
+          <p>AI is analyzing your query against the library catalog...</p>
+        </div>
+      )}
+
       <div className="book-grid">
-        {books.map(book => (
+        {displayBooks.map(book => (
           <div key={book.id} className="book-card">
+            {book._aiScore !== undefined && (
+              <div className="ai-match-badge">
+                <span className="ai-score">✨ {Math.round(book._aiScore * 100)}% match</span>
+              </div>
+            )}
             <h3>{book.title}</h3>
             <div className="author">by {book.author}</div>
             <div className="meta">ISBN: {book.isbn} · {book.publicationYear} · {book.publisher}</div>
             <div className="meta">Genre: {book.genre}</div>
             <div className="description">{book.description}</div>
+            {book._aiReason && (
+              <div className="ai-reason">
+                <strong>Why this matches:</strong> {book._aiReason}
+              </div>
+            )}
             <span className={`availability ${book.availableCopies > 0 ? 'available' : 'unavailable'}`}>
               {book.availableCopies > 0
                 ? `${book.availableCopies} of ${book.totalCopies} available`
@@ -187,9 +314,13 @@ export default function BooksPage() {
         ))}
       </div>
 
-      {books.length === 0 && <p style={{ textAlign: 'center', color: '#718096', marginTop: 40 }}>No books found.</p>}
+      {displayBooks.length === 0 && !aiLoading && (
+        <p style={{ textAlign: 'center', color: '#718096', marginTop: 40 }}>
+          {smartSearch ? 'No AI results yet. Enter a query and press Enter to search.' : 'No books found.'}
+        </p>
+      )}
 
-      {totalPages > 1 && (
+      {showPagination && (
         <div className="pagination">
           <button disabled={page <= 1} onClick={() => setPage(p => p - 1)}>← Prev</button>
           {Array.from({ length: totalPages }, (_, i) => (

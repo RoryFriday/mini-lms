@@ -11,10 +11,15 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__DefaultConnection=Data Source=/data/library.db
-      - Jwt__Key=SuperSecretKeyThatIsLongEnough1234567890!
+      - Jwt__Key=${JWT_KEY:-SuperSecretKeyThatIsLongEnough1234567890!}
       - Jwt__Issuer=LibraryApi
       - Jwt__Audience=LibraryApp
       - Cors__Origins=http://localhost:3000,http://localhost
+      - Ai__Provider=${AI_PROVIDER:-OpenAi}
+      - Ai__OpenAi__ApiKey=${OPENAI_API_KEY:-}
+      - Ai__OpenAi__Model=${OPENAI_MODEL:-gpt-4o}
+      - Ai__Anthropic__ApiKey=${ANTHROPIC_API_KEY:-}
+      - Ai__Anthropic__Model=${ANTHROPIC_MODEL:-claude-sonnet-4-20250514}
     volumes:
       - db-data:/data
     restart: unless-stopped

@@ -1,0 +1,37 @@
+# .NET
+bin/
+obj/
+*.db
+*.db-shm
+*.db-wal
+*.user
+*.suo
+.vs/
+
+# Node / React
+node_modules/
+frontend/build/
+.env
+.env.local
+.env.*.local
+
+# Docker
+db-data/
+
+# Terraform
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.backup
+infra/*.tfplan
+infra/.terraform.lock.hcl
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

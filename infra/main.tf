@@ -8,7 +8,7 @@ terraform {
   }
 
   backend "s3" {
-    bucket = "lms-terraform-state"
+    bucket = "lms-mini-terraform-state"
     key    = "lms/terraform.tfstate"
     region = "us-east-1"
   }
@@ -30,8 +30,8 @@ module "vpc" {
   public_subnets  = ["10.0.1.0/24", "10.0.2.0/24"]
   private_subnets = ["10.0.10.0/24", "10.0.20.0/24"]
 
-  enable_nat_gateway   = true
-  single_nat_gateway   = true
+  enable_nat_gateway   = false
+  single_nat_gateway   = false
   enable_dns_hostnames = true
   enable_dns_support   = true
 
@@ -213,9 +213,12 @@ resource "aws_lb_target_group" "backend" {
   target_type = "ip"
 
   health_check {
-    path                = "/swagger/index.html"
+    path                = "/api/books"
     healthy_threshold   = 2
-    unhealthy_threshold = 10
+    unhealthy_threshold = 5
+    timeout             = 10
+    interval            = 30
+    matcher             = "200"
   }
 
   tags = var.tags
@@ -253,10 +256,15 @@ resource "aws_ecs_task_definition" "backend" {
   family                   = "${var.app_name}-backend"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = 256
-  memory                   = 512
+  cpu                      = 512
+  memory                   = 1024
   execution_role_arn       = aws_iam_role.ecs_task_execution.arn
   task_role_arn            = aws_iam_role.ecs_task.arn
+
+  runtime_platform {
+    operating_system_family = "LINUX"
+    cpu_architecture        = "ARM64"
+  }
 
   container_definitions = jsonencode([{
     name  = "backend"
@@ -271,8 +279,20 @@ resource "aws_ecs_task_definition" "backend" {
       { name = "Jwt__Issuer", value = "LibraryApi" },
       { name = "Jwt__Audience", value = "LibraryApp" },
       { name = "Cors__Origins", value = "http://${aws_lb.main.dns_name}" },
-      { name = "ConnectionStrings__DefaultConnection", value = "Data Source=/data/library.db" },
+      { name = "ConnectionStrings__DefaultConnection", value = "Data Source=library.db" },
+      { name = "Ai__Provider", value = var.ai_provider },
+      { name = "Ai__OpenAi__ApiKey", value = var.openai_api_key },
+      { name = "Ai__OpenAi__Model", value = var.openai_model },
+      { name = "Ai__Anthropic__ApiKey", value = var.anthropic_api_key },
+      { name = "Ai__Anthropic__Model", value = var.anthropic_model },
     ]
+    healthCheck = {
+      command     = ["CMD-SHELL", "curl -f http://localhost:8080/api/books || exit 1"]
+      interval    = 30
+      timeout     = 5
+      retries     = 3
+      startPeriod = 60
+    }
     logConfiguration = {
       logDriver = "awslogs"
       options = {
@@ -294,6 +314,11 @@ resource "aws_ecs_task_definition" "frontend" {
   memory                   = 512
   execution_role_arn       = aws_iam_role.ecs_task_execution.arn
   task_role_arn            = aws_iam_role.ecs_task.arn
+
+  runtime_platform {
+    operating_system_family = "LINUX"
+    cpu_architecture        = "ARM64"
+  }
 
   container_definitions = jsonencode([{
     name  = "frontend"
@@ -324,9 +349,9 @@ resource "aws_ecs_service" "backend" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets          = module.vpc.private_subnets
+    subnets          = module.vpc.public_subnets
     security_groups  = [aws_security_group.ecs.id]
-    assign_public_ip = false
+    assign_public_ip = true
   }
 
   load_balancer {
@@ -346,9 +371,9 @@ resource "aws_ecs_service" "frontend" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets          = module.vpc.private_subnets
+    subnets          = module.vpc.public_subnets
     security_groups  = [aws_security_group.ecs.id]
-    assign_public_ip = false
+    assign_public_ip = true
   }
 
   load_balancer {

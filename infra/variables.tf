@@ -17,6 +17,38 @@ variable "jwt_secret" {
   default     = "SuperSecretKeyThatIsLongEnough1234567890!"
 }
 
+variable "ai_provider" {
+  description = "AI provider to use: OpenAi or Anthropic"
+  type        = string
+  default     = "OpenAi"
+}
+
+variable "openai_api_key" {
+  description = "OpenAI API key"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "openai_model" {
+  description = "OpenAI model to use"
+  type        = string
+  default     = "gpt-4o"
+}
+
+variable "anthropic_api_key" {
+  description = "Anthropic API key"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "anthropic_model" {
+  description = "Anthropic model to use"
+  type        = string
+  default     = "claude-sonnet-4-20250514"
+}
+
 variable "tags" {
   description = "Tags applied to all resources"
   type        = map(string)

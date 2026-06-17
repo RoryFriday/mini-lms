@@ -1,6 +1,7 @@
 # .NET
 bin/
 obj/
+publish/
 *.db
 *.db-shm
 *.db-wal
@@ -25,6 +26,7 @@ infra/*.tfstate
 infra/*.tfstate.backup
 infra/*.tfplan
 infra/.terraform.lock.hcl
+infra/terraform.tfvars
 
 # IDE
 .idea/
@@ -32,6 +34,9 @@ infra/.terraform.lock.hcl
 *.swp
 *.swo
 *~
+
+# Bonus docs
+bonus/
 
 # OS
 .DS_Store

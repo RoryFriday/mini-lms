@@ -30,6 +30,7 @@ services:
       dockerfile: Dockerfile
       args:
         - REACT_APP_API_URL=
+        - NGINX_CONF=nginx.conf
     container_name: lms-frontend
     ports:
       - "80:80"

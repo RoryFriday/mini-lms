@@ -25,6 +25,14 @@ A full-stack library management application built with **.NET 8.0**, **React**, 
 | Infrastructure | Terraform, AWS (ECS Fargate, ALB, ECR, VPC) |
 | AI Providers   | OpenAI (GPT-4o) or Anthropic (Claude), configurable |
 
+## Live Demo
+
+A live version of the app is available at: **[http://lms-alb-729992990.us-east-1.elb.amazonaws.com/](http://lms-alb-729992990.us-east-1.elb.amazonaws.com/)**
+
+Use the demo accounts below to log in and explore.
+
+**Video Demo:** [Watch on Loom](https://www.loom.com/share/a73d5cd9d5a449fabe11cac5c90cc6ad)
+
 ## Quick Start (Docker Compose)
 
 ### Prerequisites
@@ -93,10 +101,6 @@ New users who register via the UI are assigned the **Patron** role by default. A
 │   ├── main.tf                # VPC, ECS, ALB, ECR, IAM, etc.
 │   ├── variables.tf
 │   └── outputs.tf
-├── bonus/                     # Bonus writeups
-│   ├── deploy-live.md         # Deployment steps & live URL plan
-│   ├── demo-video.md          # Video demo recording plan
-│   └── ai-features.md         # AI feature proposals (provider-agnostic)
 ├── docker-compose.yml
 └── README.md
 ```
@@ -140,7 +144,6 @@ The `infra/` directory contains Terraform configuration to deploy on AWS using:
 - **ECR** — Container image repositories
 - **VPC** — Isolated networking with public/private subnets
 
-See [bonus/deploy-live.md](bonus/deploy-live.md) for step-by-step deployment instructions.
 
 ## Development (Without Docker)
 

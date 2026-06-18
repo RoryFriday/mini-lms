@@ -38,5 +38,13 @@ services:
       - backend
     restart: unless-stopped
 
+  tests:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.test
+    container_name: lms-tests
+    profiles:
+      - test
+
 volumes:
   db-data:

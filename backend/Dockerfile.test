@@ -1,0 +1,8 @@
+FROM mcr.microsoft.com/dotnet/sdk:8.0
+WORKDIR /src
+COPY LibraryApi/LibraryApi.csproj LibraryApi/
+COPY LibraryApi.Tests/LibraryApi.Tests.csproj LibraryApi.Tests/
+RUN dotnet restore LibraryApi.Tests/LibraryApi.Tests.csproj
+COPY . .
+WORKDIR /src/LibraryApi.Tests
+ENTRYPOINT ["dotnet", "test", "--logger:console;verbosity=detailed"]

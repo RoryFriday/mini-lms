@@ -39,6 +39,25 @@ public class CheckoutsController : ControllerBase
             var result = await _checkoutService.ReturnBookAsync(GetUserId(), id);
             return Ok(result);
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Forbid();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [Authorize(Roles = "Librarian,Admin")]
+    [HttpPost("{id}/return-on-behalf")]
+    public async Task<ActionResult<CheckoutRecordDto>> ReturnOnBehalf(int id)
+    {
+        try
+        {
+            var result = await _checkoutService.ReturnBookOnBehalfAsync(id);
+            return Ok(result);
+        }
         catch (InvalidOperationException ex)
         {
             return BadRequest(new { message = ex.Message });

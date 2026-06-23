@@ -112,8 +112,15 @@ public class BookService : IBookService
 
     public async Task<bool> DeleteAsync(int id)
     {
-        var book = await _db.Books.FindAsync(id);
+        var book = await _db.Books
+            .Include(b => b.CheckoutRecords)
+            .FirstOrDefaultAsync(b => b.Id == id);
         if (book == null) return false;
+
+        var activeCheckouts = book.CheckoutRecords.Any(c => c.ReturnedAt == null);
+        if (activeCheckouts)
+            throw new InvalidOperationException("Cannot delete a book with active checkouts.");
+
         _db.Books.Remove(book);
         await _db.SaveChangesAsync();
         return true;

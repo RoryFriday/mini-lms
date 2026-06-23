@@ -112,6 +112,41 @@ public class CheckoutServiceTests
     }
 
     [Fact]
+    public async Task Return_OtherUsersBook_Throws()
+    {
+        var (db, user) = await TestDbContextFactory.CreateWithBooksAndUserAsync();
+        var service = new CheckoutService(db);
+
+        var record = await service.CheckoutBookAsync(user.Id, 100);
+
+        // Add a second patron
+        var user2 = new LibraryApi.Models.User
+        {
+            Id = 202, Email = "other@test.com", PasswordHash = "hashed",
+            FirstName = "Other", LastName = "Patron", Role = LibraryApi.Models.UserRole.Patron
+        };
+        db.Users.Add(user2);
+        await db.SaveChangesAsync();
+
+        // user2 should NOT be able to return user's book
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => service.ReturnBookAsync(user2.Id, record.Id));
+    }
+
+    [Fact]
+    public async Task ReturnOnBehalf_Succeeds()
+    {
+        var (db, user) = await TestDbContextFactory.CreateWithBooksAndUserAsync();
+        var service = new CheckoutService(db);
+
+        var record = await service.CheckoutBookAsync(user.Id, 100);
+
+        // Librarian/Admin can return on behalf without userId check
+        var returned = await service.ReturnBookOnBehalfAsync(record.Id);
+        Assert.True(returned.IsReturned);
+    }
+
+    [Fact]
     public async Task Return_ThenCheckoutAgain_Succeeds()
     {
         var (db, user) = await TestDbContextFactory.CreateWithBooksAndUserAsync();

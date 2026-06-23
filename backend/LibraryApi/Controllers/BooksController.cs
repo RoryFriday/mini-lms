@@ -58,8 +58,15 @@ public class BooksController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var result = await _bookService.DeleteAsync(id);
-        return result ? NoContent() : NotFound();
+        try
+        {
+            var result = await _bookService.DeleteAsync(id);
+            return result ? NoContent() : NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [HttpGet("ai-search/status")]
@@ -68,6 +75,7 @@ public class BooksController : ControllerBase
         return Ok(new { available = _aiSearchService.IsAvailable });
     }
 
+    [Authorize]
     [HttpPost("ai-search")]
     public async Task<ActionResult<AiSearchResult>> AiSearch([FromBody] AiSearchRequestDto dto)
     {
@@ -82,9 +90,9 @@ public class BooksController : ControllerBase
             var result = await _aiSearchService.SearchAsync(dto.Query);
             return Ok(result);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return StatusCode(500, new { message = "AI search failed. Falling back to standard search.", error = ex.Message });
+            return StatusCode(500, new { message = "AI search failed. Falling back to standard search." });
         }
     }
 }

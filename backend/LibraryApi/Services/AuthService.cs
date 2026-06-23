@@ -15,7 +15,7 @@ public interface IAuthService
     Task<AuthResponseDto> LoginAsync(LoginDto dto);
     Task<UserDto?> GetUserByIdAsync(int id);
     Task<IEnumerable<UserDto>> GetAllUsersAsync();
-    Task<bool> UpdateUserRoleAsync(int userId, UserRole role);
+    Task<bool> UpdateUserRoleAsync(int adminUserId, int userId, UserRole role);
 }
 
 public class AuthService : IAuthService
@@ -31,6 +31,9 @@ public class AuthService : IAuthService
 
     public async Task<AuthResponseDto> RegisterAsync(RegisterDto dto)
     {
+        if (string.IsNullOrWhiteSpace(dto.Password) || dto.Password.Length < 8)
+            throw new InvalidOperationException("Password must be at least 8 characters.");
+
         if (await _db.Users.AnyAsync(u => u.Email == dto.Email))
             throw new InvalidOperationException("Email already registered.");
 
@@ -71,10 +74,23 @@ public class AuthService : IAuthService
         return await _db.Users.Select(u => ToDto(u)).ToListAsync();
     }
 
-    public async Task<bool> UpdateUserRoleAsync(int userId, UserRole role)
+    public async Task<bool> UpdateUserRoleAsync(int adminUserId, int userId, UserRole role)
     {
         var user = await _db.Users.FindAsync(userId);
         if (user == null) return false;
+
+        // Prevent admin from demoting themselves
+        if (userId == adminUserId)
+            throw new InvalidOperationException("You cannot change your own role.");
+
+        // Prevent removing the last admin
+        if (user.Role == UserRole.Admin && role != UserRole.Admin)
+        {
+            var adminCount = await _db.Users.CountAsync(u => u.Role == UserRole.Admin);
+            if (adminCount <= 1)
+                throw new InvalidOperationException("Cannot demote the last admin.");
+        }
+
         user.Role = role;
         await _db.SaveChangesAsync();
         return true;

@@ -67,7 +67,15 @@ public class AuthController : ControllerBase
         if (!Enum.TryParse<UserRole>(role, true, out var userRole))
             return BadRequest(new { message = "Invalid role." });
 
-        var result = await _authService.UpdateUserRoleAsync(id, userRole);
-        return result ? Ok() : NotFound();
+        try
+        {
+            var adminUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var result = await _authService.UpdateUserRoleAsync(adminUserId, id, userRole);
+            return result ? Ok() : NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 }

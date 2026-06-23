@@ -49,6 +49,7 @@ export const aiSearchBooks = (query) => api.post('/books/ai-search', { query });
 // Checkouts
 export const checkoutBook = (bookId) => api.post('/checkouts', { bookId });
 export const returnBook = (recordId) => api.post(`/checkouts/${recordId}/return`);
+export const returnBookOnBehalf = (recordId) => api.post(`/checkouts/${recordId}/return-on-behalf`);
 export const getMyCheckouts = (activeOnly = false) => api.get('/checkouts/my', { params: { activeOnly } });
 export const getAllCheckouts = (activeOnly = false) => api.get('/checkouts', { params: { activeOnly } });
 

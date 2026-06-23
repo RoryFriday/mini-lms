@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getAllCheckouts, returnBook } from '../api';
+import { getAllCheckouts, returnBookOnBehalf } from '../api';
 
 export default function ManageCheckoutsPage() {
   const [checkouts, setCheckouts] = useState([]);
@@ -19,7 +19,7 @@ export default function ManageCheckoutsPage() {
 
   const handleReturn = async (id) => {
     try {
-      await returnBook(id);
+      await returnBookOnBehalf(id);
       setMessage('Book returned successfully!');
       fetchCheckouts();
       setTimeout(() => setMessage(''), 3000);

@@ -9,6 +9,7 @@ public interface ICheckoutService
 {
     Task<CheckoutRecordDto> CheckoutBookAsync(int userId, int bookId);
     Task<CheckoutRecordDto> ReturnBookAsync(int userId, int recordId);
+    Task<CheckoutRecordDto> ReturnBookOnBehalfAsync(int recordId);
     Task<IEnumerable<CheckoutRecordDto>> GetUserCheckoutsAsync(int userId, bool activeOnly = false);
     Task<IEnumerable<CheckoutRecordDto>> GetAllCheckoutsAsync(bool activeOnly = false);
     Task<IEnumerable<CheckoutRecordDto>> GetBookCheckoutsAsync(int bookId);
@@ -61,7 +62,26 @@ public class CheckoutService : ICheckoutService
         if (record.ReturnedAt != null)
             throw new InvalidOperationException("This book has already been returned.");
 
-        // Only the borrower or a librarian/admin can return (handled at controller level)
+        if (record.UserId != userId)
+            throw new UnauthorizedAccessException("You can only return books you have checked out.");
+
+        record.ReturnedAt = DateTime.UtcNow;
+        record.Book.AvailableCopies++;
+        record.Book.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync();
+        return await GetRecordDtoAsync(record.Id);
+    }
+
+    public async Task<CheckoutRecordDto> ReturnBookOnBehalfAsync(int recordId)
+    {
+        var record = await _db.CheckoutRecords
+            .Include(c => c.Book)
+            .FirstOrDefaultAsync(c => c.Id == recordId)
+            ?? throw new InvalidOperationException("Checkout record not found.");
+
+        if (record.ReturnedAt != null)
+            throw new InvalidOperationException("This book has already been returned.");
 
         record.ReturnedAt = DateTime.UtcNow;
         record.Book.AvailableCopies++;
